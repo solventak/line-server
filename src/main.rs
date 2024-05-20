@@ -1,15 +1,11 @@
-// make the assumption that each line is under 65K... or can we?
-//   because each TCP packet data has a max size of 65K
-//   can be increased to 1GB with window scaling but idk what that means yet and we're going to ignore that
-
 // Think about the text file like a database
-// Keep a sparse index of the file in memory and consider the file to be on disk storage
+// Keep an index of the file in memory and consider the file to be on disk storage
 //   - the index will be a hashmap of line number to byte offset
 //   - there are no writes because the data is immutable
-//   - the index will be built on startup (persisted for later?)
+//   - the index will be built on startup (persisted for later)
 //   - the index will be built by reading the file line by line and storing the byte offset of the start of the line
 //   - the index will be used to seek to the correct byte offset in the file to read the line
-//   - we can specify the number of indexes to store in memory depending on the size of the file or something else?
+
 // Frame:
 // | Command | Command Args | Checksum |
 // 0x0 is GET
@@ -17,20 +13,11 @@
 // 0x2 is SHUTDOWN
 // only command that has args is GET which is a u32.  if it is none then we will just send 0 because the first line in the file is 1 indexed
 
-// TODO: use AVL tree because it's balanced and offers fast lookups.
 // because the file is immutable we're not going to have to write to the index
 // after the first time that we read in the file and built it.
 
 // example GET
-// 0x00 | 0x00 0x00 0x00 0x01 | 0x00 0x00 0x00 0x00
-
-// TODO handle the unwraps and manage errors more effectively
-// TODO: think about making the frame more robust
-
-// TODO: set up more robust logging on the server
-// TODO: at the end do one final check to make sure that we address all of the requirements in the document
-// TODO: remove unnecessary comments
-// TODO: remove unnecessary packages from Cargo
+// 0x00 | 0x00 0x00 0x00 0x01 | 0x00 | 0x0A
 mod db;
 mod frame;
 
@@ -71,7 +58,6 @@ fn setup_logger() -> Result<(), fern::InitError> {
     Ok(())
 }
 
-// TODO: find any _ vars
 async fn shutdown_thread(mut cmd_rx: mpsc::Receiver<()>, shutdown_tx: broadcast::Sender<()>) {
     cmd_rx.recv().await;
     match shutdown_tx.send(()) {
@@ -137,8 +123,7 @@ impl Server {
         let (shutdown_tx, _) = broadcast::channel::<()>(1);
         let (cmd_tx, cmd_rx) = mpsc::channel::<()>(1);
         // start the shutdown thread
-        tokio::spawn(shutdown_thread(cmd_rx, shutdown_tx.clone())); // TODO: make this actually shut down the server instead of still running.
-                                                                    // listen for connections and create a new connection for each one
+        tokio::spawn(shutdown_thread(cmd_rx, shutdown_tx.clone()));
         let mut master_shutdown_subscriber = shutdown_tx.subscribe();
         loop {
             match tokio::time::timeout(tokio::time::Duration::from_millis(100), listener.accept())
@@ -221,7 +206,6 @@ impl Connection {
                 warn!("Lost connection from {} unexpectedly.", self.conn_id);
                 return Ok(FrameAction::EndConnection);
             }
-            // TODO: could make this return an error message to the client instead of just ERR
             Err(_e) => {
                 if let Err(e) = self.reader.get_mut().write_all(b"ERR\r\n").await {
                     warn!("Error writing to client: {:?}", e);
