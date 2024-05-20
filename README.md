@@ -19,7 +19,9 @@ Each frame has a 7 byte specification:
 The command is Ascii:
 
 0 - GET
+
 1 - QUIT
+
 2 - SHUTDOWN
 
 The line number parameter is a 32-bit Little Endian unsigned integer.
@@ -59,11 +61,17 @@ Other than that, I used stack overflow for a few questions, but nothing signific
 I used:
 
 Tokio - async driver
+
 fern - logger
+
 chrono - time library
+
 serde - database index serialization
+
 rmp-serde - msgpack compression for the index
+
 anyhow - error handling
+
 uuid - connection ID generation
 
 ## How long did you spend on this exercise?
